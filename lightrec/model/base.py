@@ -16,7 +16,7 @@ class BasicModel(Module):
 
     def to(self, device: torch.cuda.device):
         self.device = device
-        return self.to(device)
+        return super(BasicModel, self).to(device)
 
     def offer_constarins(self):
         """offer hyperparameters type constrains

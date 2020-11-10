@@ -103,7 +103,7 @@ class MindIterator(BasicIterator):
         news_vert = [""]
         news_subvert = [""]
 
-        with open(news_file, "r") as rd:
+        with open(news_file, "r", encoding='utf-8') as rd:
             for line in rd:
                 nid, vert, subvert, title, ab, url, _, _ = line.strip(
                     "\n").split(self.col_spliter)

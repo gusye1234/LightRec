@@ -87,7 +87,6 @@ class NRMS(BasicModel):
         im_R = im_R.view(-1, K_1, im_R.shape[-1])
         '(batch*history, k*dim)'
         his_R = self.news(his_word)
-        print(his_R.shape)
         '(batch, history, k*dim)'
         his_R = his_R.view(-1, his_size, his_R.shape[-1])
 

@@ -15,6 +15,7 @@ def test_nrms():
     from ..data.iterator import MindIterator
     from .training import params
     from torch import optim
+    import torch 
     param = params(for_model="nrms",
                    file="./data/utils/nrms.yaml",
                    wordDict_file="./data/utils/word_dict_all.pkl",
@@ -22,11 +23,14 @@ def test_nrms():
                    subvertDict_file="./data/utils/subvert_dict.pkl",
                    userDict_file="./data/utils/uid2index.pkl",
                    wordEmb_file="./data/utils/embedding_all.npy")
+    device = torch.device('gpu') if torch.cuda.is_available() else torch.device("cpu")
     print(param)
+    print(device)
     news = "./data/valid/news.tsv"
     user = "./data/valid/behaviors.tsv"
     iterator = MindIterator(param)
-    model = NRMS(param)
+    model = NRMS(param).to(device)
+
     label_bag = model.offer_label_bag()
     nrms_bag = model.offer_data_bag()
     iterator.open(news, user)
