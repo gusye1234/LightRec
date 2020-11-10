@@ -26,13 +26,19 @@ class BasicModel(Module):
         """
         return {}
 
+    def offer_label_bag(self):
+        raise NotImplementedError
+
+    def offer_data_bag(self):
+        raise NotImplementedError
+
     def loss(self, *args, **kwargs):
         raise NotImplementedError(
             f"model {self._name} not implemented loss function")
 
-    def evaluate(self, *args, **kwargs):
-        raise NotImplementedError(
-            f"model {self._name} not implemented evaluation function")
+    # def evaluate(self, *args, **kwargs):
+    #     raise NotImplementedError(
+    #         f"model {self._name} not implemented evaluation function")
 
 
 class BasicLayer(Module):
