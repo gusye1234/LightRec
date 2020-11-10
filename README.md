@@ -1,4 +1,4 @@
-This repo aims to create a clearer, lighter framwork from MS-Recommender. 
+This repo aims to create a clearer, lighter framwork from [MS-Recommender](https://github.com/microsoft/recommenders). 
 
 ### Why
 
