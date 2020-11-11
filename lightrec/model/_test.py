@@ -13,11 +13,14 @@ def test_param():
 def test_nrms():
     from .zoo import NRMS
     from ..data.iterator import MindIterator
+    from ..data.tools import set_seed
     from .training import params, cal_metric
     from .training import timer
     from torch import optim
     from tqdm import tqdm
     import torch
+    import numpy as np
+    set_seed(2020)
     param = params(for_model="nrms",
                    file="./data/utils/nrms.yaml",
                    wordDict_file="./data/utils/word_dict_all.pkl",
@@ -25,38 +28,58 @@ def test_nrms():
                    subvertDict_file="./data/utils/subvert_dict.pkl",
                    userDict_file="./data/utils/uid2index.pkl",
                    wordEmb_file="./data/utils/embedding_all.npy")
+
     def evaluate(model, test_iterator):
+        critical_size = 150
         label_bag = model.offer_label_bag()
         nrms_bag = model.offer_data_bag()
+        nrms_bag.append('user index')
+        group = {}
         with torch.no_grad():
-            preds = []
-            labels = []
-            for bag in test_iterator.batch(data_bag=nrms_bag, test=True):
-                pred = model(bag, scale=True).cpu().numpy()
-                truth = bag[label_bag]
-                preds.append(pred.squeeze())
-                labels.append(truth.squeeze())
+            preds = {}
+            labels = {}
+            for bag in tqdm(test_iterator.batch(data_bag=nrms_bag, test=True,size=150)):
+                truth = bag[label_bag].squeeze()
+                pred = model(bag, scale=True, by_user=True).cpu().numpy().squeeze()
+                for i, tag in enumerate(bag['user index']):
+                    if preds.get(tag, None):
+                        preds[tag].append(pred[i])
+                    else:
+                        preds[tag] = [pred[i]]
+                    if labels.get(tag, None):
+                        labels[tag].append(truth[i])
+                    else:
+                        labels[tag] = [truth[i]]
+                del bag
+            group_pred = []
+            group_label = []
+            names = list(preds)
+            for name in names:
+                group_pred.append(np.asarry(preds[name]))
+                group_label.append(np.asarray(labels[name]))
+
         return cal_metric(labels, preds, metrics=param.metrics)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
     print(param)
     print(device)
-    news = "./data/train/news.tsv"
-    user = "./data/train/behaviors.tsv"
-    iterator = MindIterator(param)
     model = NRMS(param).to(device)
+
+    # news = "./data/train/news.tsv"
+    # user = "./data/train/behaviors.tsv"
+    # iterator = MindIterator(param)
+    # iterator.open(news, user)
 
     news = "./data/valid/news.tsv"
     user = "./data/valid/behaviors.tsv"
     test_iterator = MindIterator(param)
     test_iterator.open(news, user)
+    print("Done loading")
 
     label_bag = model.offer_label_bag()
     nrms_bag = model.offer_data_bag()
-    iterator.open(news, user)
 
-    opt = optim.Adam(model.parameters(),
-                     lr = param.learning_rate)
+    opt = optim.Adam(model.parameters(), lr=param.learning_rate)
     print(evaluate(model, test_iterator))
     for epoch in range(param.epochs):
         with timer(name="epoch"):
@@ -76,6 +99,7 @@ def test_nrms():
         loss_epoch /= count
         report = evaluate(model, test_iterator)
         print(f"[{epoch}/{param.epoch}]: {loss_epoch} - {report}")
+
 
 
 if __name__ == "__main__":

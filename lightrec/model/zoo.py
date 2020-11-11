@@ -51,24 +51,37 @@ class NRMS(BasicModel):
     def loss(self, pred, truth):
         # (pred,
         #  truth) = TO(pred,truth, device=self.device)
-        
+
         label = torch.zeros(truth.shape[0]).to(self.device).long()
         cate_loss = self.loss_function(pred, label)
-        
+
         return cate_loss
 
-    def forward(self, batch_data_bag, scale=False):
+    def groupByUser(self, users_array):
+        unique_user = np.unique(users_array)
+        user_where = []
+        masks = []
+        for u in unique_user:
+            user_where.append(np.where(users_array == u)[0][0])
+            masks.append(torch.BoolTensor(users_array == u))
+        return user_where, masks
+
+    def forward(self, batch_data_bag, by_user=False,scale=False):
         """
         'impression clicked', (batch, 1+npratio)
         'impression title', (batch 1+npratio, title)
         'history title', (batch, his, title)
         'user index', (batch)
         """
-        (im_news, im_label,his_news) = TO(batch_data_bag['impression title'],
-                                          batch_data_bag['impression clicked'],
-                                          batch_data_bag['history title'],
-                                          device=self.device)
-        _, K_1, title_size = im_news.shape
+        if by_user == True:
+            user_where, masks = self.groupByUser(
+                batch_data_bag['user index'])
+            batch_data_bag['history title'] = batch_data_bag['history title'][user_where]
+
+        (im_news, his_news) = TO(batch_data_bag['impression title'],
+                                 batch_data_bag['history title'],
+                                 device=self.device)
+        batch_size, K_1, title_size = im_news.shape
         _, his_size, _ = his_news.shape
         word_emb = self.word_emb_dim
 
@@ -94,8 +107,14 @@ class NRMS(BasicModel):
         user_R = self.user(his_R)
 
         # ----------------
-        user_R = user_R.unsqueeze_(-1)
         '(batch, 1+npratio)'
+        if by_user:
+            dims = user_R.shape[-1]
+            Ori_user_R = torch.zeros(batch_size, dims).to(self.device).double()
+            for i in range(len(masks)):
+                Ori_user_R[masks[i]] = user_R[i]
+            user_R = Ori_user_R
+        user_R = user_R.unsqueeze_(-1)
         CTR = torch.matmul(im_R, user_R).squeeze()
         if scale:
             return self.sigmoid(CTR)

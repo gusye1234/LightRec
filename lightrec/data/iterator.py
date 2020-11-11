@@ -173,7 +173,7 @@ class MindIterator(BasicIterator):
                 labels.append(label)
                 uindexes.append(uindex)
                 impr_index += 1
-                
+
                 self.size += len(label)
         users_data_bag = {
             "history" : histories,
@@ -190,12 +190,11 @@ class MindIterator(BasicIterator):
         }
         return results
 
-    def impression_batch(self, data_bag):
+    def impression_batch(self, data_bag, size=None):
         """Diff from batch, yield all data from one user at once
         """
         Iter_bag = {name: [] for name in self.Mind_data_bag}
         total_size = len(self._data_bag['user'])
-        print(total_size)
         indexes = np.arange(total_size)
         np.random.shuffle(indexes)
         for index in indexes:
@@ -207,40 +206,43 @@ class MindIterator(BasicIterator):
             for i, name in enumerate(self.Mind_data_bag):
                 Iter_bag[name] = []
 
-    def batch(self, data_bag, test=False):
+    def batch(self, data_bag, size=None,test=False):
         self.check_data_bag(data_bag)
-        if test == True:
-            for bag in self.impression_batch(data_bag):
-                yield bag
-        else:
-            Iter_bag = {
-                name:[] for name in self.Mind_data_bag
-            }
+        # if test == True:
+        #     for bag in self.impression_batch(data_bag, size=size):
+        #         yield bag
+        size = size or self.batch_size
+        Iter_bag = {
+            name:[] for name in self.Mind_data_bag
+        }
 
-            total_size = len(self._data_bag['user'])
-            indexes = np.arange(total_size)
-            np.random.shuffle(indexes)
-            count = 0
-            for index in indexes:
-                bag = self.parser_one_line(index)
-                length = len(bag[0])
-                if count + length >= self.batch_size:
-                    take = self.batch_size - count
-                    left = length - take
-                else:
-                    take = length
-                count += take
-                for i, name in enumerate(self.Mind_data_bag):
-                    Iter_bag[name].extend(bag[i][:take])
+        total_size = len(self._data_bag['user'])
+        indexes = np.arange(total_size)
+        np.random.shuffle(indexes)
+        count = 0
+        for index in indexes:
+            bag = self.parser_one_line(index, whole=test)
+            length = len(bag[0])
+            if count + length >= size:
+                take = size - count
+                left = length - take
+            else:
+                take = length
+            count += take
+            for i, name in enumerate(self.Mind_data_bag):
+                Iter_bag[name].extend(bag[i][:take])
 
-                if count >= self.batch_size:
+            if count >= size:
+                while count >= size:
                     yield self.Bag(
                         Iter_bag,
                         data_bag = data_bag
                     )
                     count = left
                     for i, name in enumerate(self.Mind_data_bag):
-                        Iter_bag[name] = bag[i][-left:]
+                        Iter_bag[name] = bag[i][take:take+size]
+                    left -= size
+                    take += size
 
     def parser_one_line(self, index, data_bag = {}, whole=False):
         """Parse index into feature values.

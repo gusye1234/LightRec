@@ -10,15 +10,28 @@ def test_mind():
         userDict_file = "./data/utils/uid2index.pkl"
     )
     print(param)
+    # news = "./data/train/news.tsv"
+    # user = "./data/train/behaviors.tsv"
+    # iterator = MindIterator(param)
+    # iterator.open(news, user)
+
     news = "./data/valid/news.tsv"
     user = "./data/valid/behaviors.tsv"
-    iterator = MindIterator(param)
-    iterator.open(news, user)
+    test_iterator = MindIterator(param)
+    test_iterator.open(news, user)
     my_bag = [
         'user index', 'impression clicked', 'impression title', 'history title'
     ]
-    for bag in tqdm(iterator.batch(data_bag=my_bag, test=True)):
-        print({name: value.shape for name, value in bag.items()})
+    count = 0
+    # for bag in tqdm(iterator.batch(data_bag=my_bag)):
+    #     count += 1
+    # print(count)
+    print(test_iterator.size)
+    count = 0
+    for bag in tqdm(test_iterator.batch(data_bag=my_bag, test=True, size=150)):
+        # print(bag['user index'].shape)
+        count += 1
+    print(count)
     print("MindIterator pass")
 
 
