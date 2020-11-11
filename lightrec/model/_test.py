@@ -30,6 +30,7 @@ def test_nrms():
                    wordEmb_file="./data/utils/embedding_all.npy")
 
     def evaluate(model, test_iterator):
+        model.eval()
         critical_size = 150
         label_bag = model.offer_label_bag()
         nrms_bag = model.offer_data_bag()
@@ -38,14 +39,18 @@ def test_nrms():
         with torch.no_grad():
             preds = {}
             labels = {}
-            for bag in tqdm(test_iterator.batch(data_bag=nrms_bag, test=True,size=150)):
+            for bag in tqdm(
+                    test_iterator.batch(data_bag=nrms_bag, test=True,
+                                        size=250)):
                 truth = bag[label_bag].squeeze()
-                pred = model(bag, scale=True, by_user=True).cpu().numpy().squeeze()
+                pred = model(bag, scale=True,
+                             by_user=True).cpu().numpy().squeeze()
                 for i, tag in enumerate(bag['user index']):
                     if preds.get(tag, None):
                         preds[tag].append(pred[i])
                     else:
                         preds[tag] = [pred[i]]
+
                     if labels.get(tag, None):
                         labels[tag].append(truth[i])
                     else:
@@ -55,20 +60,21 @@ def test_nrms():
             group_label = []
             names = list(preds)
             for name in names:
-                group_pred.append(np.asarry(preds[name]))
+                group_pred.append(np.asarray(preds[name]))
                 group_label.append(np.asarray(labels[name]))
+        print(group_label, group_pred)
+        return cal_metric(group_label, group_pred, metrics=param.metrics)
 
-        return cal_metric(labels, preds, metrics=param.metrics)
-
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device("cpu")
     print(param)
-    print(device)
+    print("device:", device)
     model = NRMS(param).to(device)
 
-    # news = "./data/train/news.tsv"
-    # user = "./data/train/behaviors.tsv"
-    # iterator = MindIterator(param)
-    # iterator.open(news, user)
+    news = "./data/train/news.tsv"
+    user = "./data/train/behaviors.tsv"
+    iterator = MindIterator(param)
+    iterator.open(news, user)
 
     news = "./data/valid/news.tsv"
     user = "./data/valid/behaviors.tsv"
@@ -80,12 +86,15 @@ def test_nrms():
     nrms_bag = model.offer_data_bag()
 
     opt = optim.Adam(model.parameters(), lr=param.learning_rate)
-    print(evaluate(model, test_iterator))
+    # print(evaluate(model, test_iterator))
     for epoch in range(param.epochs):
+        model = model.train()
         with timer(name="epoch"):
             count, loss_epoch = 1, 0.
-            for bag in tqdm(iterator.batch(data_bag=nrms_bag)):
-                pred = model(bag)
+            bar = tqdm(iterator.batch(data_bag=nrms_bag))
+            start_loss = None
+            for bag in bar:
+                pred = model(bag, by_user=True)
                 truth = bag[label_bag]
                 # print(pred.shape)
                 # print(truth.shape, pred.shape)
@@ -93,13 +102,17 @@ def test_nrms():
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
+                if start_loss is None:
+                    start_loss = loss.item()
                 loss_epoch += loss.item()
+                bar.set_description(
+                    f"loss: {loss_epoch/count:.3f}/{start_loss:.3f}")
                 count += 1
+                del bag
                 # print(f"    {loss_epoch/count}")
         loss_epoch /= count
         report = evaluate(model, test_iterator)
         print(f"[{epoch}/{param.epoch}]: {loss_epoch} - {report}")
-
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ def test_mind():
     # print(count)
     print(test_iterator.size)
     count = 0
-    for bag in tqdm(test_iterator.batch(data_bag=my_bag, test=True, size=150)):
+    for bag in tqdm(test_iterator.batch(data_bag=my_bag, test=True, size=250)):
         # print(bag['user index'].shape)
         count += 1
     print(count)
