@@ -55,6 +55,7 @@ class MindIterator(BasicIterator):
         self.uid2index = self.load_dict(params.userDict_file)
         self.nid2index = {}
         self._data_bag = {}
+        self.size = 0
         self.Mind_data_bag = [
             'impression clicked',
             'impression index',
@@ -167,12 +168,13 @@ class MindIterator(BasicIterator):
                 ]
                 label = [int(i.split("-")[1]) for i in impr.split()]
                 uindex = self.uid2index[uid] if uid in self.uid2index else 0
-
                 histories.append(history)
                 imprs.append(impr_news)
                 labels.append(label)
                 uindexes.append(uindex)
                 impr_index += 1
+                
+                self.size += len(label)
         users_data_bag = {
             "history" : histories,
             "impression": imprs,
@@ -187,41 +189,60 @@ class MindIterator(BasicIterator):
             name:np.asanyarray(bag[name]) for name in data_bag
         }
         return results
-            
 
-    def batch(self, data_bag):
-        self.check_data_bag(data_bag)
-
-        Iter_bag = {
-            name:[] for name in self.Mind_data_bag
-        }
-
+    def impression_batch(self, data_bag):
+        """Diff from batch, yield all data from one user at once
+        """
+        Iter_bag = {name: [] for name in self.Mind_data_bag}
         total_size = len(self._data_bag['user'])
+        print(total_size)
         indexes = np.arange(total_size)
         np.random.shuffle(indexes)
-        count = 0
         for index in indexes:
-            bag = self.parser_one_line(index)
-            length = len(bag[0])
-            if count + length >= self.batch_size:
-                take = self.batch_size - count
-                left = length - take
-            else:
-                take = length
-            count += take
+            # user_impression, 1
+            bag = self.parser_one_line(index, whole=True)
             for i, name in enumerate(self.Mind_data_bag):
-                Iter_bag[name].extend(bag[i][:take])
-                
-            if count >= self.batch_size:
-                yield self.Bag(
-                    Iter_bag,
-                    data_bag = data_bag
-                )
-                count = left
+                Iter_bag[name].extend(bag[i])
+            yield self.Bag(Iter_bag, data_bag=data_bag)
+            for i, name in enumerate(self.Mind_data_bag):
+                Iter_bag[name] = []
+
+    def batch(self, data_bag, test=False):
+        self.check_data_bag(data_bag)
+        if test == True:
+            for bag in self.impression_batch(data_bag):
+                yield bag
+        else:
+            Iter_bag = {
+                name:[] for name in self.Mind_data_bag
+            }
+
+            total_size = len(self._data_bag['user'])
+            indexes = np.arange(total_size)
+            np.random.shuffle(indexes)
+            count = 0
+            for index in indexes:
+                bag = self.parser_one_line(index)
+                length = len(bag[0])
+                if count + length >= self.batch_size:
+                    take = self.batch_size - count
+                    left = length - take
+                else:
+                    take = length
+                count += take
                 for i, name in enumerate(self.Mind_data_bag):
-                    Iter_bag[name] = bag[i][-left:]
-                    
-    def parser_one_line(self, index, data_bag = {}):
+                    Iter_bag[name].extend(bag[i][:take])
+
+                if count >= self.batch_size:
+                    yield self.Bag(
+                        Iter_bag,
+                        data_bag = data_bag
+                    )
+                    count = left
+                    for i, name in enumerate(self.Mind_data_bag):
+                        Iter_bag[name] = bag[i][-left:]
+
+    def parser_one_line(self, index, data_bag = {}, whole=False):
         """Parse index into feature values.
         
         Args:
@@ -258,25 +279,39 @@ class MindIterator(BasicIterator):
         click_ab_index = []
         click_vert_index = []
         click_subvert_index = []
-        for p in poss:
+        if whole == True:
+            poss_first = len(poss)
+            whole = poss + negs
+            for i, new in enumerate(whole):
+                labels.append([1] if i < poss_first else [0])
+                candidate_title_index.append(self._data_bag['title'][[new]])
+                candidate_ab_index.append(self._data_bag['abstract'][[new]])
+                candidate_vert_index.append(self._data_bag['category'][[new]])
+                candidate_subvert_index.append(self._data_bag['subcategory'][[new]])
+                click_title_index.append(self._data_bag['title'][self._data_bag["history"][index]])
+                click_ab_index.append(self._data_bag['abstract'][self._data_bag["history"][index]])
+                click_vert_index.append(self._data_bag['category'][self._data_bag["history"][index]])
+                click_subvert_index.append(self._data_bag['subcategory'][self._data_bag["history"][index]])
+                impr_index.append(self._data_bag['impression index'][index])
+                user_index.append(self._data_bag['user'][index])
+        else:
+            for p in poss:
+                labels.append([1]+[0] * npratio)
 
-
-            labels.append([1]+[0] * npratio)
-
-            n = newsample(negs, npratio)
-            candidate_title_index.append(self._data_bag['title'][[p] + n])
-            candidate_ab_index.append(self._data_bag['abstract'][[p] + n])
-            candidate_vert_index.append(self._data_bag['category'][[p] + n])
-            candidate_subvert_index.append(self._data_bag['subcategory'][[p] + n])
-            click_title_index.append(self._data_bag['title'][self._data_bag["history"][index]])
-            click_ab_index.append(self._data_bag['abstract'][self._data_bag["history"][index]])
-            click_vert_index.append(self._data_bag['category'][self._data_bag["history"][index]])
-            click_subvert_index.append(self._data_bag['subcategory'][self._data_bag["history"][index]])
-            impr_index.append(self._data_bag['impression index'][index])
-            user_index.append(self._data_bag['user'][index])
+                n = newsample(negs, npratio)
+                candidate_title_index.append(self._data_bag['title'][[p] + n])
+                candidate_ab_index.append(self._data_bag['abstract'][[p] + n])
+                candidate_vert_index.append(self._data_bag['category'][[p] + n])
+                candidate_subvert_index.append(self._data_bag['subcategory'][[p] + n])
+                click_title_index.append(self._data_bag['title'][self._data_bag["history"][index]])
+                click_ab_index.append(self._data_bag['abstract'][self._data_bag["history"][index]])
+                click_vert_index.append(self._data_bag['category'][self._data_bag["history"][index]])
+                click_subvert_index.append(self._data_bag['subcategory'][self._data_bag["history"][index]])
+                impr_index.append(self._data_bag['impression index'][index])
+                user_index.append(self._data_bag['user'][index])
 
         return (
-            labels, 
+            labels,
             impr_index,
             user_index,
             candidate_title_index,

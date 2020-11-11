@@ -17,7 +17,7 @@ def test_mind():
     my_bag = [
         'user index', 'impression clicked', 'impression title', 'history title'
     ]
-    for bag in tqdm(iterator.batch(data_bag=my_bag)):
+    for bag in tqdm(iterator.batch(data_bag=my_bag, test=True)):
         print({name: value.shape for name, value in bag.items()})
     print("MindIterator pass")
 

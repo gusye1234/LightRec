@@ -57,7 +57,7 @@ class NRMS(BasicModel):
         
         return cate_loss
 
-    def forward(self, batch_data_bag):
+    def forward(self, batch_data_bag, scale=False):
         """
         'impression clicked', (batch, 1+npratio)
         'impression title', (batch 1+npratio, title)
@@ -97,4 +97,6 @@ class NRMS(BasicModel):
         user_R = user_R.unsqueeze_(-1)
         '(batch, 1+npratio)'
         CTR = torch.matmul(im_R, user_R).squeeze()
+        if scale:
+            return self.sigmoid(CTR)
         return CTR
