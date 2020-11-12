@@ -36,10 +36,6 @@ class BasicModel(Module):
         raise NotImplementedError(
             f"model {self._name} not implemented loss function")
 
-    # def evaluate(self, *args, **kwargs):
-    #     raise NotImplementedError(
-    #         f"model {self._name} not implemented evaluation function")
-
 
 class BasicLayer(Module):
     """The base of layer, wrapped functions operation

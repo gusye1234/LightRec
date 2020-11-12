@@ -1,6 +1,12 @@
 import re
 import random
 import numpy as np
+from os.path import dirname
+
+def getDataDir():
+    now = __file__
+    return dirname(dirname(now))
+
 
 def word_tokenize(sent):
     """ Split sentence into word list using regex.

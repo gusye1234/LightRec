@@ -7,6 +7,8 @@ import pickle
 from ..model import training
 
 class BasicIterator:
+    """Basic class of data iterator
+    """
     def __init__(self,
                  params:training.params):
         self.params = params
@@ -88,6 +90,12 @@ class MindIterator(BasicIterator):
                                f"available data: {self.Mind_data_bag}")
 
     def open(self, news_file, behavior_file):
+        """Load data from news file, behavior file
+
+        Args:
+            news_file (str): file name
+            behavior_file (str): file name
+        """
         self._open_news(news_file)
         self._open_behavior(behavior_file)
 
@@ -185,32 +193,23 @@ class MindIterator(BasicIterator):
         self._data_bag.update(users_data_bag)
 
     def Bag(self, bag, data_bag):
+        """Select data for training
+
+        Args:
+            bag (dict): all the data bag supported in MindIterator
+            data_bag (dict): the data model wants
+
+        Returns:
+            dict
+        """
         results = {
             name:np.asanyarray(bag[name]) for name in data_bag
         }
         return results
 
-    def impression_batch(self, data_bag, size=None):
-        """Diff from batch, yield all data from one user at once
-        """
-        Iter_bag = {name: [] for name in self.Mind_data_bag}
-        total_size = len(self._data_bag['user'])
-        indexes = np.arange(total_size)
-        np.random.shuffle(indexes)
-        for index in indexes:
-            # user_impression, 1
-            bag = self.parser_one_line(index, whole=True)
-            for i, name in enumerate(self.Mind_data_bag):
-                Iter_bag[name].extend(bag[i])
-            yield self.Bag(Iter_bag, data_bag=data_bag)
-            for i, name in enumerate(self.Mind_data_bag):
-                Iter_bag[name] = []
-
     def batch(self, data_bag, size=None,test=False):
         self.check_data_bag(data_bag)
-        # if test == True:
-        #     for bag in self.impression_batch(data_bag, size=size):
-        #         yield bag
+
         size = size or self.batch_size
         Iter_bag = {
             name:[] for name in self.Mind_data_bag
@@ -251,11 +250,7 @@ class MindIterator(BasicIterator):
             index (str): a string indicating one instance.
 
         Returns:
-            list: Parsed results including label, impression id , user id, 
-            candidate_title_index, clicked_title_index, 
-            candidate_ab_index, clicked_ab_index,
-            candidate_vert_index, clicked_vert_index,
-            candidate_subvert_index, clicked_subvert_index,
+            tuple: the data bag in the order of self.Mind_data_bag
         """
         npratio = self.npratio
 

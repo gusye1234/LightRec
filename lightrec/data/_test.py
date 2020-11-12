@@ -2,6 +2,7 @@ def test_mind():
     from tqdm import tqdm
     from .iterator import MindIterator
     from ..model import training
+    import numpy as np
     param = training.params(
         file="./data/utils/nrms.yaml",
         wordDict_file = "./data/utils/word_dict_all.pkl",
@@ -28,10 +29,21 @@ def test_mind():
     # print(count)
     print(test_iterator.size)
     count = 0
+    click = {}
     for bag in tqdm(test_iterator.batch(data_bag=my_bag, test=True, size=250)):
         # print(bag['user index'].shape)
+        label = bag['impression clicked'].squeeze()
+        for i, u in enumerate(bag['user index']):
+            if click.get(u, None):
+                click[u].append(i)
+            else:
+                click[u] = [i]
         count += 1
-    print(count)
+    group_click = []
+    for name in list(click):
+        group_click.append(sum(click[name]))
+    group_click = np.asarray(group_click)
+    print(np.sum(group_click == 0))
     print("MindIterator pass")
 
 

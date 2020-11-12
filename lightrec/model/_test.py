@@ -28,7 +28,7 @@ def test_nrms():
                    subvertDict_file="./data/utils/subvert_dict.pkl",
                    userDict_file="./data/utils/uid2index.pkl",
                    wordEmb_file="./data/utils/embedding_all.npy")
-
+    model_save = "nrms.pth.tar"
     def evaluate(model, test_iterator):
         model.eval()
         critical_size = 150
@@ -55,6 +55,7 @@ def test_nrms():
                         labels[tag].append(truth[i])
                     else:
                         labels[tag] = [truth[i]]
+                        assert truth[i] == 1
                 del bag
             group_pred = []
             group_label = []
@@ -62,7 +63,6 @@ def test_nrms():
             for name in names:
                 group_pred.append(np.asarray(preds[name]))
                 group_label.append(np.asarray(labels[name]))
-        print(group_label, group_pred)
         return cal_metric(group_label, group_pred, metrics=param.metrics)
 
     device = torch.device(
@@ -86,7 +86,7 @@ def test_nrms():
     nrms_bag = model.offer_data_bag()
 
     opt = optim.Adam(model.parameters(), lr=param.learning_rate)
-    # print(evaluate(model, test_iterator))
+    print(evaluate(model, test_iterator))
     for epoch in range(param.epochs):
         model = model.train()
         with timer(name="epoch"):
@@ -110,9 +110,10 @@ def test_nrms():
                 count += 1
                 del bag
                 # print(f"    {loss_epoch/count}")
+        print()
         loss_epoch /= count
         report = evaluate(model, test_iterator)
-        print(f"[{epoch}/{param.epoch}]: {loss_epoch} - {report}")
+        print(f"[{epoch+1}/{param.epochs}]: {loss_epoch:.3f} - {report}")
 
 
 if __name__ == "__main__":

@@ -49,15 +49,31 @@ class NRMS(BasicModel):
         return {'wordEmb_file': str, 'dropout': float}
 
     def loss(self, pred, truth):
-        # (pred,
-        #  truth) = TO(pred,truth, device=self.device)
+        """calculate crossentropy loss for NRMS
 
+        Args:
+            pred (tensor): prediction of model
+            truth (tensor): labels, assume every row's first column is positive and only have one.
+
+        Returns:
+            tensor: scale loss
+        """
         label = torch.zeros(truth.shape[0]).to(self.device).long()
         cate_loss = self.loss_function(pred, label)
 
         return cate_loss
 
     def groupByUser(self, users_array):
+        """Group a user array by its unique users
+
+        Args:
+            users_array (ndarray): A array of user index
+
+        Returns:
+            tuple: 
+                user_where: the index of unique users appear first time in user_array
+                masks: the mask of unique users whether appear, (num_unique, len(users_array))
+        """
         unique_user = np.unique(users_array)
         user_where = []
         masks = []
