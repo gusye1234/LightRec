@@ -11,10 +11,11 @@ def test_mind():
         userDict_file = "./data/utils/uid2index.pkl"
     )
     print(param)
-    # news = "./data/train/news.tsv"
-    # user = "./data/train/behaviors.tsv"
-    # iterator = MindIterator(param)
-    # iterator.open(news, user)
+    news = "./data/train/news.tsv"
+    user = "./data/train/behaviors.tsv"
+    iterator = MindIterator(param)
+    iterator.open(news, user)
+    print(iterator.size, iterator.user_num, iterator.news_num)
 
     news = "./data/valid/news.tsv"
     user = "./data/valid/behaviors.tsv"
@@ -27,7 +28,7 @@ def test_mind():
     # for bag in tqdm(iterator.batch(data_bag=my_bag)):
     #     count += 1
     # print(count)
-    print(test_iterator.size)
+    print(test_iterator.size, test_iterator.user_num, test_iterator.news_num)
     count = 0
     click = {}
     for bag in tqdm(test_iterator.batch(data_bag=my_bag, test=True, size=250)):

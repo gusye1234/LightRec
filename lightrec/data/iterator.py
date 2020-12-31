@@ -149,7 +149,7 @@ class MindIterator(BasicIterator):
                 news_vert_index[news_index, 0] = self.vert_dict[vert]
             if subvert in self.subvert_dict:
                 news_subvert_index[news_index,0] = self.subvert_dict[subvert]
-
+        self.news_num = len(news_title_index)
         news_data_bag = {
             "title" : news_title_index,       # (total_news, title_size)
             "abstract": news_ab_index,        # (total_news, body_size)
@@ -183,6 +183,7 @@ class MindIterator(BasicIterator):
                 impr_index += 1
 
                 self.size += len(label)
+        self.user_num = len(np.unique(uindexes))
         users_data_bag = {
             "history" : histories,
             "impression": imprs,
@@ -214,7 +215,6 @@ class MindIterator(BasicIterator):
         Iter_bag = {
             name:[] for name in self.Mind_data_bag
         }
-
         total_size = len(self._data_bag['user'])
         indexes = np.arange(total_size)
         np.random.shuffle(indexes)
